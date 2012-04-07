@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # GLOSSARY
 ################################################################################
 #   * Term
@@ -23,10 +25,32 @@
 #   are productions for productions rules (1) and (2) respectivelly.
 # ("S", [ [ "NP" "VP" ] ]), ("NP", [ [ "D", "N" ], [ "John"] ]), ...
 #   are rules.
-   
+
+import sys
+
+class Feature:
+    def __init__(self, str):
+        parts = str.split("=")
+        self.name = parts[0]
+        self.val = parts[1] if len(parts) > 1 else None
+        
+    def __str__(self):
+        return self.name + "=" + self.val
+
+    def __repr__(self):
+        return self.name if self.val is None else self.name + "=" + self.val
+
+def ParseFeatureList(list):
+    res = []
+    for part in list:
+        res.append(Feature(part))
+    return res
+
 class Production(object):
     def __init__(self, *terms):
         self.terms = terms
+        self.setfeatures = dict()
+        self.checkfeatures = set()
 
     def __len__(self):
         return len(self.terms)
@@ -38,7 +62,7 @@ class Production(object):
         return iter(self.terms)
 
     def __repr__(self):
-        return " ".join(str(t) for t in self.terms)
+        return " ".join(str(t) for t in self.terms) + " # " + str(self.setfeatures) + " " + str(self.checkfeatures)
 
     def __eq__(self, other):
         if not isinstance(other, Production):
@@ -51,15 +75,19 @@ class Production(object):
     def __hash__(self):
         return hash(self.terms)
 
-        
-        
-        
-        
+    def addfeatures(self, features):
+        for f in features:
+            if f.val is None:
+                self.checkfeatures.add(f.name)
+            else:
+                self.setfeatures[f.name] = f.val
+
         
 class Rule(object):
-    def __init__(self, name, *productions):
+    def __init__(self, name):
         self.name = name
-        self.productions = list(productions)
+        self.productions = []
+        print self.name, self.productions
 
     def __str__(self):
         return self.name
@@ -73,18 +101,19 @@ class Rule(object):
         self.productions.extend(productions)
 
         
-        
-        
 # State is a 3-tuple of a dotted rule, start column and end column.
 class State(object):
     # A dotted rule is represented as a (name, production, dot_index) 3-tuple.
-    def __init__(self, name, production, dot_index, start_column, end_column = None):
+    def __init__(self, name, production, dot_index, start_column, checkfeatures, rawfeatures, resfeatures):
         self.name = name
         self.production = production
         self.dot_index = dot_index
 
         self.start_column = start_column
-        self.end_column = end_column
+        self.end_column = None
+        self.checkfeatures = checkfeatures
+        self.rawfeatures = rawfeatures
+        self.resfeatures = resfeatures
         
         self.rules = [ term for term in self.production if isinstance(term, Rule) ]
 
@@ -178,22 +207,55 @@ class Node(object):
 
 def predict(column, rule):
     for production in rule.productions:
+        #print "-",rule.name, production, production.setfeatures, production.checkfeatures
         column.add(
             State(
                 rule.name,
                 production,
                 0,
-                column))
+                column,
+                production.checkfeatures,
+                production.setfeatures,
+                dict()))
+        #print "-", production.setfeatures
 
 def scan(column, state, token):
     if token != column.token:
         return
+    print "=",token, state.name, state.production, state.rules, state.rawfeatures, state.resfeatures
     column.add(
         State(
             state.name,
             state.production,
             state.dot_index + 1,
-            state.start_column))
+            state.start_column,
+            state.checkfeatures,
+            state.rawfeatures,
+            state.rawfeatures))
+    print "=",state.rawfeatures
+            
+def merge_features(f1, f2, rulecheck, ruleset):
+    print f1, f2, rulecheck, ruleset
+    
+    res = dict()
+
+    for key in rulecheck:
+        v1 = f1[key] if key in f1 else None
+        v2 = f2[key] if key in f2 else None
+        if v1 is None or v1 == v2:
+            res[key] = v2
+        elif v2 is None:
+            res[key] = v1
+        else:
+            print dict()
+            return (False, dict())
+        
+    for key in ruleset.keys():
+        res[key] = ruleset[key]
+        
+    print res
+    
+    return (True, res)
 
 def complete(column, state):
     if not state.is_completed():
@@ -203,12 +265,18 @@ def complete(column, state):
         if not isinstance(term, Rule):
             continue
         if term.name == state.name:
-            column.add(
-                State(
-                    prev_state.name,
-                    prev_state.production,
-                    prev_state.dot_index + 1,
-                    prev_state.start_column))
+            print term.name, prev_state.name
+            (fOK, features) = merge_features(prev_state.resfeatures, state.resfeatures, prev_state.checkfeatures, prev_state.rawfeatures);
+            if fOK:
+                column.add(
+                    State(
+                        prev_state.name,
+                        prev_state.production,
+                        prev_state.dot_index + 1,
+                        prev_state.start_column,
+                        prev_state.checkfeatures,
+                        prev_state.rawfeatures,
+                        features))
 
 GAMMA_RULE = "GAMMA"
 
@@ -219,7 +287,7 @@ def parse(starting_rule, text):
     text_with_indexes = enumerate([ None ] + text.lower().split())
 
     table = [ Column(i, token) for i, token in text_with_indexes ]
-    table[0].add(State(GAMMA_RULE, Production(starting_rule), 0, table[0]))
+    table[0].add(State(GAMMA_RULE, Production(starting_rule), 0, table[0], dict(), dict(), dict()))
 
     for i, column in enumerate(table):
         for state in column:
@@ -326,12 +394,23 @@ def load_grammar(iterable):
             raise RuntimeError, "Malformed line #{0}: Second part have to be '->'".format(n + 1)
 
         lhs = get_term(parts[0])
-        rhs = map(get_term, parts[2:])
+        bracket1 = len(parts)
+        bracket2 = -1
+        try:
+            bracket1 = parts.index('[')
+            bracket2 = parts.index(']')
+        except:
+            pass
+        
+        rhs = map(get_term, parts[2:bracket1])
+        features = map(Feature, parts[bracket1+1:bracket2])
 
         if not isinstance(lhs, Rule):
             raise RuntimeError, "Malformed line #{0}: Left-hand side have to be a non-terminal".format(n + 1)
 
-        lhs.add(Production(*rhs))
+        prod = Production(*rhs)
+        prod.addfeatures(features)
+        lhs.add(prod)
 
     if starting_rule:
         return non_terminals[starting_rule]
@@ -354,28 +433,28 @@ if __name__ == "__main__":
     #     g = load_grammar(open("a.txt"))
 
     g = load_grammar("""
-        N -> hat
-        N -> elephant
-        N -> garden
-        N -> apple
-        N -> time
-        N -> flight
-        N -> banana
-        N -> flies
-        N -> boy
-        N -> man
-        N -> telescope
+        N -> hat [ num=sg def=a ]
+        N -> elephant [ num=sg def=an ]
+        N -> garden [ num=sg def=a ]
+        N -> apple [ num=sg def=an ]
+        N -> time [ num=sg def=a ]
+        N -> flight [ num=sg def=a ]
+        N -> banana [ num=sg def=a ]
+        N -> flies [ num=sg def=a ]
+        N -> boy [ num=sg def=a ]
+        N -> man [ num=sg def=a ]
+        N -> telescope [ num=sg def=a ]
 
         NN -> john
         NN -> mary
         NN -> houston
 
-        ADJ -> giant
-        ADJ -> red
+        ADJ -> giant [ def=a ]
+        ADJ -> red [ def=a ]
 
-        D -> the
-        D -> a
-        D -> an
+        D -> the [ ]
+        D -> a [ def=a ]
+        D -> an [ def=an ]
 
         V -> book
         V -> books
@@ -401,11 +480,12 @@ if __name__ == "__main__":
         PR -> her
 
         NP -> NN
-        NP -> D N
-        NP -> D ADJ N
         NP -> PR
         NP -> PR N
         NP -> NP PP
+        NP -> D N [ def ]
+        NP_DADJ_FIC -> D ADJ [ def ]
+        NP -> NP_DADJ_FIC N
 
         PP -> P NP
 
@@ -426,9 +506,22 @@ if __name__ == "__main__":
             tree.dump()
             print
 
-    parse_and_print(g, "book the flight through houston")
-    parse_and_print(g, "john saw the boy with the telescope")
-    parse_and_print(g, "john sleeps")
-    parse_and_print(g, "he gives mary his hat")
-    parse_and_print(g, "an elephant walks in the garden")
-    parse_and_print(g, "a giant man eats a giant apple")
+    #parse_and_print(g, "an giant man eats")
+    
+    #parse_and_print(g, "book the flight through houston")
+    #parse_and_print(g, "john saw the boy with the telescope")
+    #parse_and_print(g, "john sleeps")
+    #parse_and_print(g, "he gives mary his hat")
+    #parse_and_print(g, "an elephant walks in the garden")
+    #parse_and_print(g, "a giant man eats a giant apple")
+    
+    
+    text = ""
+    while True:
+        text = sys.stdin.readline()
+        try:
+            parse_and_print(g, text.strip())
+        except:
+            print "!!! failed"
+        
+        
