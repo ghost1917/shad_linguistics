@@ -33,18 +33,12 @@ class Feature:
         parts = str.split("=")
         self.name = parts[0]
         self.val = parts[1] if len(parts) > 1 else None
-        
+
     def __str__(self):
         return self.name + "=" + self.val
 
     def __repr__(self):
         return self.name if self.val is None else self.name + "=" + self.val
-
-def ParseFeatureList(list):
-    res = []
-    for part in list:
-        res.append(Feature(part))
-    return res
 
 class Production(object):
     def __init__(self, *terms):
@@ -82,7 +76,7 @@ class Production(object):
             else:
                 self.setfeatures[f.name] = f.val
 
-        
+
 class Rule(object):
     def __init__(self, name):
         self.name = name
@@ -100,7 +94,7 @@ class Rule(object):
     def add(self, *productions):
         self.productions.extend(productions)
 
-        
+
 # State is a 3-tuple of a dotted rule, start column and end column.
 class State(object):
     # A dotted rule is represented as a (name, production, dot_index) 3-tuple.
@@ -114,7 +108,7 @@ class State(object):
         self.checkfeatures = checkfeatures
         self.rawfeatures = rawfeatures
         self.resfeatures = resfeatures
-        
+
         self.rules = [ term for term in self.production if isinstance(term, Rule) ]
 
     def __repr__(self):
@@ -147,9 +141,9 @@ class State(object):
             return None
         return self.production[self.dot_index]
 
-        
-        
-        
+
+
+
 # Column is a list of states in a chart table.
 class Column(object):
     def __init__(self, index, token):
@@ -189,9 +183,9 @@ class Column(object):
         print "=" * 40
         print
 
-        
-        
-        
+
+
+
 class Node(object):
     def __init__(self, value, children):
         self.value = value
@@ -233,28 +227,44 @@ def scan(column, state, token):
             state.rawfeatures,
             state.rawfeatures))
     print "=",state.rawfeatures
-            
-def merge_features(f1, f2, rulecheck, ruleset):
-    print f1, f2, rulecheck, ruleset
-    
+
+def is_value(s):
+    return s is not None and s.find('_') == -1
+
+# a giant man eats
+
+def merge_features(f1, f2, rulecheck, ruleset, pos, total):
+    print "#",f1, f2, rulecheck, ruleset, pos
+
     res = dict()
 
-    for key in rulecheck:
-        v1 = f1[key] if key in f1 else None
-        v2 = f2[key] if key in f2 else None
-        if v1 is None or v1 == v2:
+    for rawkey in rulecheck:
+        keys = rawkey.split('_')
+        key = keys[0]
+
+        needCheckV2 = len(keys) == 1 or str(pos) in keys[1:]
+
+        v1 = f1[key] if ((key in f1) and is_value(f1[key])) else None
+        v2 = f2[key] if ((key in f2) and is_value(f2[key])) else None
+
+        print v1, v2, needCheckV2
+
+        if not needCheckV2:
+            res[key] = v1
+        elif (v1 is None or v1 == v2):
             res[key] = v2
         elif v2 is None:
             res[key] = v1
         else:
             print dict()
             return (False, dict())
-        
-    for key in ruleset.keys():
-        res[key] = ruleset[key]
-        
+
+    if pos == total - 1:
+        for key in ruleset.keys():
+            res[key] = ruleset[key]
+
     print res
-    
+
     return (True, res)
 
 def complete(column, state):
@@ -265,8 +275,9 @@ def complete(column, state):
         if not isinstance(term, Rule):
             continue
         if term.name == state.name:
-            print term.name, prev_state.name
-            (fOK, features) = merge_features(prev_state.resfeatures, state.resfeatures, prev_state.checkfeatures, prev_state.rawfeatures);
+            print "#",term.name, prev_state.name
+            (fOK, features) = merge_features(prev_state.resfeatures, state.resfeatures, prev_state.checkfeatures, prev_state.rawfeatures, prev_state.dot_index, len(prev_state.production.terms));
+            #print "````", len(prev_state.production.terms), prev_state.production.terms
             if fOK:
                 column.add(
                     State(
@@ -299,7 +310,7 @@ def parse(starting_rule, text):
                     predict(column, term)
                 elif i + 1 < len(table):
                     scan(table[i + 1], state, term)
-        
+
         # XXX(sandello): You can uncomment this line to see full dump of
         # the chart table.
         #
@@ -325,7 +336,7 @@ def build_trees_helper(children, state, rule_index, end_column):
         start_column = state.start_column
     else:
         start_column = None
-    
+
     rule = state.rules[rule_index]
     outputs = []
 
@@ -401,7 +412,7 @@ def load_grammar(iterable):
             bracket2 = parts.index(']')
         except:
             pass
-        
+
         rhs = map(get_term, parts[2:bracket1])
         features = map(Feature, parts[bracket1+1:bracket2])
 
@@ -421,7 +432,7 @@ def load_grammar(iterable):
 
 if __name__ == "__main__":
     # You can specify grammar either by hard-coding it or by loading from file.
-    # 
+    #
     # (Specifying grammar in code)
     #     SYM  = Rule("SYM", Production("a"))
     #     OP   = Rule("OP",  Production("+"), Production("*"))
@@ -445,9 +456,9 @@ if __name__ == "__main__":
         N -> man [ num=sg def=a ]
         N -> telescope [ num=sg def=a ]
 
-        NN -> john
-        NN -> mary
-        NN -> houston
+        NN -> john [ pers=3 num=sg ]
+        NN -> mary [ pers=3 num=sg ]
+        NN -> houston [ pers=3 num=sg ]
 
         ADJ -> giant [ def=a ]
         ADJ -> red [ def=a ]
@@ -458,8 +469,8 @@ if __name__ == "__main__":
 
         V -> book
         V -> books
-        V -> eat
-        V -> eats
+        V -> eat [ pers=3 num=pl ]
+        V -> eats [ pers=3 num=sg ]
         V -> sleep
         V -> sleeps
         V -> give
@@ -479,25 +490,24 @@ if __name__ == "__main__":
         PR -> his
         PR -> her
 
-        NP -> NN
-        NP -> PR
-        NP -> PR N
-        NP -> NP PP
+        NP -> NN [ pers num ]
+        NP -> PR [ pers num ]
+        NP -> PR N [ pers num ]
+        NP -> NP PP  [ pers num ]
         NP -> D N [ def ]
-        NP_DADJ_FIC -> D ADJ [ def ]
-        NP -> NP_DADJ_FIC N
+        NP -> D ADJ N [ def_0_1 ]
 
         PP -> P NP
 
-        VP -> V
+        VP -> V [ pers num ]
         VP -> V NP
         VP -> V NP NP
         VP -> VP PP
 
-        S -> NP VP
+        S -> NP VP [ pers num ]
         S -> VP
     """.splitlines())
-    
+
     def parse_and_print(g, s):
         for tree in build_trees(parse(g, s)):
             print "-" * 80
@@ -507,15 +517,15 @@ if __name__ == "__main__":
             print
 
     #parse_and_print(g, "an giant man eats")
-    
+
     #parse_and_print(g, "book the flight through houston")
     #parse_and_print(g, "john saw the boy with the telescope")
     #parse_and_print(g, "john sleeps")
     #parse_and_print(g, "he gives mary his hat")
     #parse_and_print(g, "an elephant walks in the garden")
     #parse_and_print(g, "a giant man eats a giant apple")
-    
-    
+
+
     text = ""
     while True:
         text = sys.stdin.readline()
@@ -523,5 +533,5 @@ if __name__ == "__main__":
             parse_and_print(g, text.strip())
         except:
             print "!!! failed"
-        
+
         
