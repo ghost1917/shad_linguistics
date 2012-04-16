@@ -490,13 +490,6 @@ if __name__ == "__main__":
         PR -> his
         PR -> her
 
-        NP -> NN [ pers num ]
-        NP -> PR [ pers num ]
-        NP -> PR N [ pers num ]
-        NP -> NP PP  [ pers num ]
-        NP -> D N [ def ]
-        NP -> D ADJ N [ def_0_1 ]
-
         PP -> P NP
 
         VP -> V [ pers num ]
@@ -504,8 +497,30 @@ if __name__ == "__main__":
         VP -> V NP NP
         VP -> VP PP
 
-        S -> NP VP [ pers num ]
-        S -> VP
+        IS -> VP
+
+
+        S -> SS 
+        S -> IS
+        S -> WHS
+        S -> AUXS
+        S -> SS CON SS
+        S -> SS CON SS CON SS
+        S -> SS CON SS CON SS CON SS
+
+        SS -> NP VP [ pers num ]
+
+        NP -> NN [ pers num ]
+        NP -> PR [ pers num posses_0_+0 ]
+        NP -> PR N [ posses_0_+1 num_1 pers_1 ]
+        NP -> NP PP  [ pers_0 num_0 ]
+        NP -> D N [ def ]
+        NP -> D ADJ N [ def_0_1 ]
+
+        VP -> V [ pers num ]
+        VP -> V NP
+        VP -> V NP NP
+        VP -> VP PP
     """.splitlines())
 
     def parse_and_print(g, s):
