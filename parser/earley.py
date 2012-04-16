@@ -320,10 +320,7 @@ def parse(starting_rule, text):
                 elif i + 1 < len(table):
                     scan(table[i + 1], state, term)
 
-        # XXX(sandello): You can uncomment this line to see full dump of
-        # the chart table.
-        #
-        # column.dump(only_completed = False)
+        if parsing_table: column.dump(only_completed = False)
 
     # Find Gamma rule in the last table column or fail otherwise.
     for state in table[-1]:
@@ -448,10 +445,14 @@ if __name__ == "__main__":
     parser.add_option("-t", "--tree",
                       action="store_true", dest="print_tree", default=False,
                       help="prints syntax trees for well parsed sentences")
+    parser.add_option("-p", "--parsing_table",
+                      action="store_true", dest="parsing_table", default=False,
+                      help="prints parsing table for sentences")
 
     (options, args) = parser.parse_args()
     verbose = options.verbose
     print_tree = options.print_tree
+    parsing_table = options.parsing_table
 
     
     # You can specify grammar either by hard-coding it or by loading from file.
@@ -481,11 +482,11 @@ if __name__ == "__main__":
 
     for text in sys.stdin:
         try:
-            if print_tree: parse_and_print(g, text.strip())
+            if print_tree: parse_and_print(g, text.strip().lower())
             else: 
-                parse(g, text);             
-                print "parsing \"%s\" is Ok" % text.strip ()
+                parse(g, text.strip().lower())
+                print "parsing \"%s\" is Ok" % text.strip ().lower()
         except:
-            print "!!! failed to parse \"%s\"" % text.strip ()
+            print "!!! failed to parse \"%s\"" % text.strip ().lower()
 
         
