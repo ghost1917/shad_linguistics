@@ -444,9 +444,13 @@ if __name__ == "__main__":
     parser.add_option("-q", "--quiet",
                       action="store_false", dest="verbose", default=True,
                       help="print status messages to stdout")
+    parser.add_option("-t", "--tree",
+                      action="store_true", dest="print_tree", default=False,
+                      help="prints syntax trees for well parsed sentences")
 
     (options, args) = parser.parse_args()
     verbose = options.verbose
+    print_tree = options.print_tree
 
     
     # You can specify grammar either by hard-coding it or by loading from file.
@@ -508,14 +512,14 @@ if __name__ == "__main__":
         V -> books [ pers=3 num=sg ]
         V -> eat [ pers=3 num=pl ]
         V -> eats [ pers=3 num=sg ]
-        V -> sleep [ pers=3 num=sg ]
-        V -> sleeps [ pers=3 num=pl ]
-        V -> give [ pers=3 num=sg ]
-        V -> gives [ pers=3 num=pl ]
-        V -> walk [ pers=3 num=sg ]
-        V -> walks [ pers=3 num=pl ]
-        V -> saw [ pers=3 num=pl ]
-        V -> saw [ pers=3 num=sg ]
+        V -> sleep [ pers=3 num=pl ]
+        V -> sleeps [ pers=3 num=sg ]
+        V -> give [ pers=3 num=pl ]
+        V -> gives [ pers=3 num=sg ]
+        V -> walk [ pers=3 num=pl ]
+        V -> walks [ pers=3 num=sg ]
+        V -> see [ pers=3 num=pl ]
+        V -> sees [ pers=3 num=sg ]
 
         D -> the [ ]
         D -> a [ def=a ]
@@ -549,11 +553,16 @@ if __name__ == "__main__":
             tree.dump()
             print
 
+    #parse_and_print(g, "john saw the boy with the telescope")
+    #parse_and_print(g, "john sleeps")
+
     for text in sys.stdin:
-        print text 
         try:
-            parse_and_print(g, text.strip())
+            if print_tree: parse_and_print(g, text.strip())
+            else: 
+                parse(g, text);             
+                print "parsing \"%s\" is Ok" % text.strip ()
         except:
-            print "!!! failed"
+            print "!!! failed to parse \"%s\"" % text.strip ()
 
         
