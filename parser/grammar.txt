@@ -1,4 +1,4 @@
-  S -> SS 
+  S -> SS # "S" is starting emelemt in parsing tree
   S -> IS
   S -> WHS
   S -> AUXS
@@ -9,6 +9,7 @@
   SS -> NP VP [ pers num ]
   IS -> VP
 
+  # NP means "noun phrase"
   NP -> NN [ pers num ]
   NP -> PR [ pers num posses_0_+0 ]
   NP -> PR N [ posses_0_+1 num_1 pers_1 ]
