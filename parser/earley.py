@@ -525,9 +525,10 @@ if __name__ == "__main__":
         NP -> D ADJ N [ def_0_1 ]
 
         VP -> V [ pers num ]
-        VP -> V NP
-        VP -> V NP NP
-        VP -> VP PP
+        VP -> V NP [ pers_0 num_0 ]
+        VP -> V PR [ pers_0 num_0 posses_1_+0 ]
+        VP -> V NP NP [  ]
+        VP -> VP PP [ pers_0 num_0 ]
     """.splitlines())
 
     def parse_and_print(g, s):
