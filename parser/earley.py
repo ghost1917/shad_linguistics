@@ -263,6 +263,14 @@ def merge_features(f1, f2, rulecheck, ruleset, pos, total):
         for key in ruleset.keys():
             res[key] = ruleset[key]
 
+        for rawkey in rulecheck:
+            keys = rawkey.split('_')
+            key = keys[0]
+
+            for v in keys[1:]:
+                if v[0] == '+' and v[1:] != res[key] and res[key] is not None:
+                    return (False, dict())
+
     print res
 
     return (True, res)
@@ -277,7 +285,6 @@ def complete(column, state):
         if term.name == state.name:
             print "#",term.name, prev_state.name
             (fOK, features) = merge_features(prev_state.resfeatures, state.resfeatures, prev_state.checkfeatures, prev_state.rawfeatures, prev_state.dot_index, len(prev_state.production.terms));
-            #print "````", len(prev_state.production.terms), prev_state.production.terms
             if fOK:
                 column.add(
                     State(
