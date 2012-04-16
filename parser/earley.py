@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from optparse import OptionParser
+
 # GLOSSARY
 ################################################################################
 #   * Term
@@ -81,7 +83,7 @@ class Rule(object):
     def __init__(self, name):
         self.name = name
         self.productions = []
-        print self.name, self.productions
+        if verbose: print self.name, self.productions
 
     def __str__(self):
         return self.name
@@ -216,7 +218,7 @@ def predict(column, rule):
 def scan(column, state, token):
     if token != column.token:
         return
-    print "=",token, state.name, state.production, state.rules, state.rawfeatures, state.resfeatures
+    if verbose: print "=",token, state.name, state.production, state.rules, state.rawfeatures, state.resfeatures
     column.add(
         State(
             state.name,
@@ -226,7 +228,7 @@ def scan(column, state, token):
             state.checkfeatures,
             state.rawfeatures,
             state.rawfeatures))
-    print "=",state.rawfeatures
+    if verbose: print "=",state.rawfeatures
 
 def is_value(s):
     return s is not None and s.find('_') == -1
@@ -234,7 +236,7 @@ def is_value(s):
 # a giant man eats
 
 def merge_features(f1, f2, rulecheck, ruleset, pos, total):
-    print "#",f1, f2, rulecheck, ruleset, pos
+    if verbose: print "#",f1, f2, rulecheck, ruleset, pos
 
     res = dict()
 
@@ -247,7 +249,7 @@ def merge_features(f1, f2, rulecheck, ruleset, pos, total):
         v1 = f1[key] if ((key in f1) and is_value(f1[key])) else None
         v2 = f2[key] if ((key in f2) and is_value(f2[key])) else None
 
-        print v1, v2, needCheckV2
+        if verbose: print v1, v2, needCheckV2
 
         if not needCheckV2:
             res[key] = v1
@@ -256,7 +258,7 @@ def merge_features(f1, f2, rulecheck, ruleset, pos, total):
         elif v2 is None:
             res[key] = v1
         else:
-            print dict()
+            if verbose: print dict()
             return (False, dict())
 
     if pos == total - 1:
@@ -271,7 +273,7 @@ def merge_features(f1, f2, rulecheck, ruleset, pos, total):
                 if v[0] == '+' and v[1:] != res[key] and res[key] is not None:
                     return (False, dict())
 
-    print res
+    if verbose: print res
 
     return (True, res)
 
@@ -283,7 +285,7 @@ def complete(column, state):
         if not isinstance(term, Rule):
             continue
         if term.name == state.name:
-            print "#",term.name, prev_state.name
+            if verbose: print "#",term.name, prev_state.name
             (fOK, features) = merge_features(prev_state.resfeatures, state.resfeatures, prev_state.checkfeatures, prev_state.rawfeatures, prev_state.dot_index, len(prev_state.production.terms));
             if fOK:
                 column.add(
@@ -438,6 +440,15 @@ def load_grammar(iterable):
 ################################################################################
 
 if __name__ == "__main__":
+    parser = OptionParser()
+    parser.add_option("-q", "--quiet",
+                      action="store_false", dest="verbose", default=True,
+                      help="print status messages to stdout")
+
+    (options, args) = parser.parse_args()
+    verbose = options.verbose
+
+    
     # You can specify grammar either by hard-coding it or by loading from file.
     #
     # (Specifying grammar in code)
@@ -451,62 +462,6 @@ if __name__ == "__main__":
     #     g = load_grammar(open("a.txt"))
 
     g = load_grammar("""
-        N -> hat [ num=sg def=a ]
-        N -> elephant [ num=sg def=an ]
-        N -> garden [ num=sg def=a ]
-        N -> apple [ num=sg def=an ]
-        N -> time [ num=sg def=a ]
-        N -> flight [ num=sg def=a ]
-        N -> banana [ num=sg def=a ]
-        N -> flies [ num=sg def=a ]
-        N -> boy [ num=sg def=a ]
-        N -> man [ num=sg def=a ]
-        N -> telescope [ num=sg def=a ]
-
-        NN -> john [ pers=3 num=sg ]
-        NN -> mary [ pers=3 num=sg ]
-        NN -> houston [ pers=3 num=sg ]
-
-        ADJ -> giant [ def=a ]
-        ADJ -> red [ def=a ]
-
-        D -> the [ ]
-        D -> a [ def=a ]
-        D -> an [ def=an ]
-
-        V -> book
-        V -> books
-        V -> eat [ pers=3 num=pl ]
-        V -> eats [ pers=3 num=sg ]
-        V -> sleep
-        V -> sleeps
-        V -> give
-        V -> gives
-        V -> walk
-        V -> walks
-        V -> saw
-
-        P -> with
-        P -> in
-        P -> on
-        P -> at
-        P -> through
-
-        PR -> he
-        PR -> she
-        PR -> his
-        PR -> her
-
-        PP -> P NP
-
-        VP -> V [ pers num ]
-        VP -> V NP
-        VP -> V NP NP
-        VP -> VP PP
-
-        IS -> VP
-
-
         S -> SS 
         S -> IS
         S -> WHS
@@ -516,6 +471,7 @@ if __name__ == "__main__":
         S -> SS CON SS CON SS CON SS
 
         SS -> NP VP [ pers num ]
+        IS -> VP
 
         NP -> NN [ pers num ]
         NP -> PR [ pers num posses_0_+0 ]
@@ -527,8 +483,62 @@ if __name__ == "__main__":
         VP -> V [ pers num ]
         VP -> V NP [ pers_0 num_0 ]
         VP -> V PR [ pers_0 num_0 posses_1_+0 ]
-        VP -> V NP NP [  ]
+        VP -> V NP NP [ pers_0 num_0 ]
         VP -> VP PP [ pers_0 num_0 ]
+
+        PP -> P NP [ ]
+
+        PR -> he [ pers=3 num=sg posses=0 ]
+        PR -> she [ pers=3 num=sg posses=0 ]
+        PR -> it [ pers=3 num=sg posses=0 ]
+        PR -> they [ pers=3 num=pl posses=0 ]
+        
+        PR -> his [ pers=3 num=sg posses=1 ]
+        PR -> shis [ pers=3 num=sg posses=1 ]
+        PR -> its [ pers=3 num=sg posses=1 ]
+        PR -> their [ pers=3 num=pl posses=1 ]
+
+        P -> with [ ]
+        P -> in [ ]
+        P -> on [ ]
+        P -> at [ ]
+        P -> through [ ]
+
+        V -> book [ pers=3 num=pl ]
+        V -> books [ pers=3 num=sg ]
+        V -> eat [ pers=3 num=pl ]
+        V -> eats [ pers=3 num=sg ]
+        V -> sleep [ pers=3 num=sg ]
+        V -> sleeps [ pers=3 num=pl ]
+        V -> give [ pers=3 num=sg ]
+        V -> gives [ pers=3 num=pl ]
+        V -> walk [ pers=3 num=sg ]
+        V -> walks [ pers=3 num=pl ]
+        V -> saw [ pers=3 num=pl ]
+        V -> saw [ pers=3 num=sg ]
+
+        D -> the [ ]
+        D -> a [ def=a ]
+        D -> an [ def=an ]
+
+        ADJ -> giant [ def=a ]
+        ADJ -> red [ def=a ]
+
+        NN -> john [ pers=3 num=sg ]
+        NN -> mary [ pers=3 num=sg ]
+        NN -> houston [ pers=3 num=sg ]
+
+        N -> hat [ num=sg def=a ]
+        N -> elephant [ num=sg def=an ]
+        N -> garden [ num=sg def=a ]
+        N -> apple [ num=sg def=an ]
+        N -> time [ num=sg def=a ]
+        N -> flight [ num=sg def=a ]
+        N -> banana [ num=sg def=a ]
+        N -> flies [ num=sg def=a ]
+        N -> boy [ num=sg def=a ]
+        N -> man [ num=sg def=a ]
+        N -> telescope [ num=sg def=a ]
     """.splitlines())
 
     def parse_and_print(g, s):
@@ -539,19 +549,8 @@ if __name__ == "__main__":
             tree.dump()
             print
 
-    #parse_and_print(g, "an giant man eats")
-
-    #parse_and_print(g, "book the flight through houston")
-    #parse_and_print(g, "john saw the boy with the telescope")
-    #parse_and_print(g, "john sleeps")
-    #parse_and_print(g, "he gives mary his hat")
-    #parse_and_print(g, "an elephant walks in the garden")
-    #parse_and_print(g, "a giant man eats a giant apple")
-
-
-    text = ""
-    while True:
-        text = sys.stdin.readline()
+    for text in sys.stdin:
+        print text 
         try:
             parse_and_print(g, text.strip())
         except:
