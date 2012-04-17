@@ -1,10 +1,10 @@
-An engeieer is smart.
-An oficeer is strong.
-An apple is tasty.
-An animal is wild.
-An artifact is powerful.
-A cat is small.
-A dog is not small typically.
-A fish is quiet.
-A weapon is dangerous.
-A human is flexible.
+an elephant eats an apple
+an elephant eats a banana
+an elephant eats the banana
+an elephant eats the apple
+the elephant eats an apple
+a boy eats an apple
+a boy eats a banana
+a boy eats the banana
+he eats an orange apple
+he eats a red apple
