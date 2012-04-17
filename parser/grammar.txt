@@ -11,15 +11,15 @@
 
   # NP means "noun phrase"
   NP -> NN [ pers num ]
-  NP -> PR [ pers num posses_0_+0 ]
+  NP -> PR [ pers num posses_0_+0 obj_0 ]
   NP -> PR N [ posses_0_+1 num_1 pers_1 ]
-  NP -> NP PP  [ pers_0 num_0 ]
+  NP -> NP PP  [ pers_0 num_0 obj_0 ]
   NP -> D N [ def per num ]
   NP -> N [ pers num ]
-  NP -> D ADJ N [ def_0_1  ]
+  NP -> D ADJ N [ def_0_1 pers_2 num_2 ]
 
   VP -> V [ pers num ]
-  VP -> V NP [ pers_0 num_0 ]
+  VP -> V NP [ pers_0 num_0 obj_1_+1 ]
   VP -> V PR [ pers_0 num_0 obj_1_+1 ]
   VP -> V NP NP [ pers_0 num_0 ]
   VP -> VP PP [ pers_0 num_0 ]
