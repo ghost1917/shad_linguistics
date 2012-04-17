@@ -62,6 +62,7 @@
 
   ADJ -> giant [ def=a ]
   ADJ -> red [ def=a ]
+  ADJ -> orange [ def=an ]
 
   NN -> john [ pers=3 num=sg ]
   NN -> mary [ pers=3 num=sg ]
@@ -82,4 +83,5 @@
   N -> telescope [ pers=3 num=sg def=a ]
   N -> time [ pers=3 num=sg def=a ]
   N -> way [ pers=3 num=sg def=a ]
+
 
