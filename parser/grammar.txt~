@@ -13,7 +13,7 @@
   IS -> VP
 
   # NP means "noun phrase"
-  NP -> EVERY NP [ pers_1 num_1_+sg ]
+  NP -> EVERY NP [ num_1_+sg ]
   NP -> NN [ pers num ]
   NP -> PR [ pers num posses_0_+0 obj_0 ]
   NP -> PR N [ posses_0_+1 num_1 pers_1 ]
